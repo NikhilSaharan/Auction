@@ -3,8 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { Gavel } from 'lucide-react';
 import { formatIndianCurrency } from '../utils/format';
 
-const API_BASE = 'http://localhost:5112/api';
-const HUB_URL = 'http://localhost:5112/auctionHub';
+import { API_BASE, HUB_URL } from '../config';
 
 const CATEGORIES = ['Marquee', 'Elite', 'Bowler', 'Keeper', 'Allrounder'];
 

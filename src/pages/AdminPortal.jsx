@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { UserPlus, ShieldPlus, List, Edit2, Trash2, RefreshCw } from 'lucide-react';
 import { formatIndianCurrency, parseIndianCurrency } from '../utils/format';
 
-const API_BASE = 'http://localhost:5112/api';
+import { API_BASE } from '../config';
 
 export default function AdminPortal() {
   const [bidders, setBidders] = useState([]);
