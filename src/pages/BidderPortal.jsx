@@ -36,7 +36,11 @@ export default function BidderPortal() {
 
   const fetchTeam = async (ownerId) => {
     const res = await fetch(`${API_BASE}/franchisees/by-owner/${ownerId}`);
-    if (res.ok) setTeam(await res.json());
+    if (res.ok) {
+      setTeam(await res.json());
+    } else {
+      alert('No team assigned to this bidder yet. Please ask the Admin to create a team for you.');
+    }
   };
 
   if (!user || !team) {
