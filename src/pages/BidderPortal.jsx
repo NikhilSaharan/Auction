@@ -5,7 +5,7 @@ import { formatIndianCurrency } from '../utils/format';
 
 import { API_BASE, HUB_URL } from '../config';
 
-const CATEGORIES = ['Marquee', 'Elite', 'Bowler', 'Keeper', 'Allrounder'];
+const CATEGORIES = ['Marquee', 'Elite', 'Batsman', 'Bowler', 'Keeper', 'Allrounder'];
 
 export default function BidderPortal() {
   const [user, setUser] = useState(null);
