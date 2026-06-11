@@ -63,9 +63,7 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
   const [connection, setConnection] = useState(null);
   const [activePlayer, setActivePlayer] = useState(null);
   const [highestBid, setHighestBid] = useState({ amount: 0, teamName: '' });
-  const [timer, setTimer] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef(null);
   const isPausedRef = useRef(false);
   
   // Real-time announcement overlay state
@@ -106,13 +104,11 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
       setActivePlayer({ id, name, base_price: base });
       setHighestBid({ amount: base, teamName: 'Base Price' });
       setIsPaused(false);
-      resetTimer();
       fetchAuctionData(); // Refresh list to show active player status
     });
 
     newConnection.on('ReceiveBid', (franchiseeId, franchiseeName, amount) => {
       setHighestBid({ amount, teamName: franchiseeName });
-      resetTimer();
     });
 
     newConnection.on('ReceivePauseBid', () => setIsPaused(true));
@@ -123,7 +119,6 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
       setActivePlayer(null);
       if (franchiseeId === team.id) onRefreshTeam(); // Update balance
       fetchAuctionData(); // Refresh list to show sold player
-      clearInterval(timerRef.current);
       
       // Auto-clear announcement after 4 seconds
       setTimeout(() => setAnnouncement(null), 4000);
@@ -133,7 +128,6 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
       setAnnouncement({ type: 'Unsold', playerName });
       setActivePlayer(null);
       fetchAuctionData(); // Refresh list to show unsold player
-      clearInterval(timerRef.current);
 
       // Auto-clear announcement after 4 seconds
       setTimeout(() => setAnnouncement(null), 4000);
@@ -142,25 +136,10 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
     setConnection(newConnection);
     return () => { 
       newConnection.stop(); 
-      clearInterval(timerRef.current); 
     };
   }, [team.id]);
 
-  const resetTimer = () => {
-    clearInterval(timerRef.current);
-    setTimer(15);
-    timerRef.current = setInterval(() => {
-      if (!isPausedRef.current) {
-        setTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }
-    }, 1000);
-  };
+
 
   const placeBid = async (increment) => {
     if (isPaused) return alert('Bidding is paused!');
@@ -282,37 +261,23 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
         </div>
       ) : (
         <div className="bg-gray-800/80 p-5 md:p-8 rounded-2xl border border-blue-500/30 shadow-2xl shadow-blue-900/20 text-center relative overflow-hidden">
-          {timer <= 5 && timer > 0 && !isPaused && (
-            <div className="absolute top-3 right-3 md:top-4 md:right-4 animate-bounce text-red-500 opacity-80">
-              <Gavel size={32} className="md:w-12 md:h-12" />
-            </div>
-          )}
 
           <h3 className="text-3xl md:text-5xl font-extrabold text-white mb-1 md:mb-2">{activePlayer.name}</h3>
           <p className="text-sm md:text-base text-gray-400 mb-6 md:mb-8">Base Price: {formatIndianCurrency(activePlayer.base_price)}</p>
           
-          <div className="flex flex-col md:flex-row justify-center items-center space-y-6 md:space-y-0 md:space-x-12 mb-8 md:mb-10 bg-gray-900/40 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none">
+          <div className="flex flex-col justify-center items-center mb-8 md:mb-10 bg-gray-900/40 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none">
             <div className="text-center">
               <p className="text-xs md:text-sm text-gray-400 uppercase tracking-widest mb-1">Current Bid</p>
               <p className="text-3xl md:text-4xl font-bold text-green-400">{formatIndianCurrency(highestBid.amount)}</p>
               <p className="text-xs md:text-sm text-gray-500 mt-1">by {highestBid.teamName}</p>
             </div>
-            
-            <div className="w-full h-px md:w-px md:h-24 bg-gray-700 my-4 md:my-0"></div>
-            
-            <div className="text-center">
-              <p className="text-xs md:text-sm text-gray-400 uppercase tracking-widest mb-1">Time Left</p>
-              <div className={`text-4xl md:text-5xl font-bold tabular-nums ${timer <= 5 ? 'text-red-500 animate-pulse' : 'text-blue-400'}`}>
-                {isPaused ? 'PAUSED' : `00:${timer.toString().padStart(2, '0')}`}
-              </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <BidButton amount={2000000} label="+ 20L" onClick={() => placeBid(2000000)} disabled={isPaused || timer === 0} />
-            <BidButton amount={5000000} label="+ 50L" onClick={() => placeBid(5000000)} disabled={isPaused || timer === 0} />
-            <BidButton amount={10000000} label="+ 1Cr" onClick={() => placeBid(10000000)} disabled={isPaused || timer === 0} />
-            <BidButton amount={50000000} label="+ 5Cr" onClick={() => placeBid(50000000)} disabled={isPaused || timer === 0} />
+            <BidButton amount={2000000} label="+ 20L" onClick={() => placeBid(2000000)} disabled={isPaused} />
+            <BidButton amount={5000000} label="+ 50L" onClick={() => placeBid(5000000)} disabled={isPaused} />
+            <BidButton amount={10000000} label="+ 1Cr" onClick={() => placeBid(10000000)} disabled={isPaused} />
+            <BidButton amount={50000000} label="+ 5Cr" onClick={() => placeBid(50000000)} disabled={isPaused} />
           </div>
         </div>
       )}

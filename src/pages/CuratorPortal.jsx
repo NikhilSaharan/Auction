@@ -17,9 +17,7 @@ export default function CuratorPortal() {
 
   const [announcement, setAnnouncement] = useState(null);
 
-  const [timer, setTimer] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef(null);
   const isPausedRef = useRef(false);
 
   useEffect(() => {
@@ -38,7 +36,6 @@ export default function CuratorPortal() {
 
     newConnection.on('ReceiveBid', (franchiseeId, franchiseeName, amount) => {
       setHighestBid({ amount, teamId: franchiseeId, teamName: franchiseeName });
-      resetTimer(); // Reset timer to 15s on each new bid
     });
 
     newConnection.on('ReceivePauseBid', () => setIsPaused(true));
@@ -48,41 +45,10 @@ export default function CuratorPortal() {
 
     return () => {
       newConnection.stop();
-      clearInterval(timerRef.current);
     };
   }, []);
 
-  // Monitor timer reaching 0 to automatically end bidding
-  useEffect(() => {
-    if (timer === 0 && activePlayer && !isPaused) {
-      handleAutoEnd();
-    }
-  }, [timer]);
 
-  const handleAutoEnd = async () => {
-    clearInterval(timerRef.current);
-    if (highestBid.teamId) {
-      await markSold();
-    } else {
-      await markUnsold();
-    }
-  };
-
-  const resetTimer = () => {
-    clearInterval(timerRef.current);
-    setTimer(15);
-    timerRef.current = setInterval(() => {
-      if (!isPausedRef.current) {
-        setTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }
-    }, 1000);
-  };
 
   const fetchTeams = async () => {
     try {
@@ -132,7 +98,6 @@ export default function CuratorPortal() {
     const randomPlayer = available[Math.floor(Math.random() * available.length)];
     setActivePlayer(randomPlayer);
     setHighestBid({ amount: randomPlayer.base_price, teamId: null, teamName: 'Base Price' });
-    resetTimer();
     setIsPaused(false);
 
     if (connection) {
@@ -164,7 +129,6 @@ export default function CuratorPortal() {
         const randomPlayer = available[Math.floor(Math.random() * available.length)];
         setActivePlayer(randomPlayer);
         setHighestBid({ amount: randomPlayer.base_price, teamId: null, teamName: 'Base Price' });
-        resetTimer();
         setIsPaused(false);
 
         if (connection) {
@@ -177,7 +141,6 @@ export default function CuratorPortal() {
   };
 
   const markSold = async () => {
-    clearInterval(timerRef.current);
     if (!highestBid.teamId) return alert('No bids yet!');
     try {
       const pName = activePlayer.name;
@@ -203,7 +166,6 @@ export default function CuratorPortal() {
   };
 
   const markUnsold = async () => {
-    clearInterval(timerRef.current);
     try {
       const pName = activePlayer.name;
       
@@ -294,18 +256,10 @@ export default function CuratorPortal() {
             <h2 className="text-4xl font-extrabold text-white mb-2">{activePlayer.name}</h2>
             <p className="text-gray-400 mb-8">Base: {formatIndianCurrency(activePlayer.base_price)}</p>
             
-            <div className="bg-gray-900 w-full p-6 rounded-xl border border-gray-700 mb-8 grid grid-cols-2 gap-4 text-center">
-              <div>
-                <p className="text-sm text-gray-400 uppercase tracking-wider mb-1">Highest Bid</p>
-                <p className="text-3xl font-bold text-green-400">{formatIndianCurrency(highestBid.amount)}</p>
-                <p className="text-gray-500 mt-2 text-xs">by {highestBid.teamName}</p>
-              </div>
-              <div className="border-l border-gray-800 flex flex-col justify-center">
-                <p className="text-sm text-gray-400 uppercase tracking-wider mb-1">Time Left</p>
-                <p className={`text-4xl font-bold tabular-nums ${timer <= 5 ? 'text-red-500 animate-pulse' : 'text-blue-400'}`}>
-                  {isPaused ? 'PAUSED' : `00:${timer.toString().padStart(2, '0')}`}
-                </p>
-              </div>
+            <div className="bg-gray-900 w-full p-6 rounded-xl border border-gray-700 mb-8 flex flex-col justify-center items-center text-center">
+              <p className="text-sm text-gray-400 uppercase tracking-wider mb-1">Highest Bid</p>
+              <p className="text-3xl font-bold text-green-400">{formatIndianCurrency(highestBid.amount)}</p>
+              <p className="text-gray-500 mt-2 text-xs">by {highestBid.teamName}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 w-full text-white">
