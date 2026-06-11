@@ -48,7 +48,11 @@ export default function BidderPortal() {
       setTeam(teamData);
       localStorage.setItem('auction_bidder_team', JSON.stringify(teamData));
     } else {
-      alert('No team assigned to this bidder yet. Please ask the Admin to create a team for you.');
+      alert('No team found or the auction was reset. You are being logged out.');
+      setUser(null);
+      setTeam(null);
+      localStorage.removeItem('auction_bidder_user');
+      localStorage.removeItem('auction_bidder_team');
     }
   };
 
