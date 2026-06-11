@@ -8,8 +8,14 @@ import { API_BASE, HUB_URL } from '../config';
 const CATEGORIES = ['Marquee', 'Elite', 'Batsman', 'Bowler', 'Keeper', 'Allrounder'];
 
 export default function BidderPortal() {
-  const [user, setUser] = useState(null);
-  const [team, setTeam] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('auction_bidder_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [team, setTeam] = useState(() => {
+    const saved = localStorage.getItem('auction_bidder_team');
+    return saved ? JSON.parse(saved) : null;
+  });
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +31,7 @@ export default function BidderPortal() {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        localStorage.setItem('auction_bidder_user', JSON.stringify(userData));
         fetchTeam(userData.id);
       } else {
         alert('Invalid credentials');
@@ -37,7 +44,9 @@ export default function BidderPortal() {
   const fetchTeam = async (ownerId) => {
     const res = await fetch(`${API_BASE}/franchisees/by-owner/${ownerId}`);
     if (res.ok) {
-      setTeam(await res.json());
+      const teamData = await res.json();
+      setTeam(teamData);
+      localStorage.setItem('auction_bidder_team', JSON.stringify(teamData));
     } else {
       alert('No team assigned to this bidder yet. Please ask the Admin to create a team for you.');
     }
