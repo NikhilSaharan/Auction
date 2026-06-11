@@ -130,17 +130,24 @@ function CreateFranchiseeCard({ bidders, franchisees, players, onCreated }) {
   const [ownerId, setOwnerId] = useState('');
   const [name, setName] = useState('');
   const [purse, setPurse] = useState('');
+  const [purseUnit, setPurseUnit] = useState('Cr');
 
   // Editing state for teams
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [editPurseLimit, setEditPurseLimit] = useState('');
+  const [editPurseUnit, setEditPurseUnit] = useState('Cr');
+  const [editBalance, setEditBalance] = useState('');
+  const [editBalanceUnit, setEditBalanceUnit] = useState('Cr');
   
   // Expandable team for viewing players
   const [expandedTeamId, setExpandedTeamId] = useState(null);
 
   const submit = async (e) => {
     e.preventDefault();
-    const parsedPurse = parseIndianCurrency(purse);
+    const numericPurse = parseFloat(purse);
+    if (isNaN(numericPurse) || numericPurse <= 0) return alert("Invalid amount");
+    const parsedPurse = purseUnit === 'Cr' ? numericPurse * 10000000 : numericPurse * 100000;
+    
     try {
       const res = await fetch(`${API_BASE}/franchisees`, {
         method: 'POST',
@@ -159,19 +166,17 @@ function CreateFranchiseeCard({ bidders, franchisees, players, onCreated }) {
     }
   };
 
-  const handleUpdatePurse = async (team) => {
-    const newPurse = parseIndianCurrency(editPurseLimit);
-    if (isNaN(newPurse) || newPurse <= 0) {
-      alert('Please enter a valid purse limit');
+  const handleUpdateTeam = async (team) => {
+    const newPurseNum = parseFloat(editPurseLimit);
+    const newPurse = editPurseUnit === 'Cr' ? newPurseNum * 10000000 : newPurseNum * 100000;
+    
+    const newBalanceNum = parseFloat(editBalance);
+    const newBalance = editBalanceUnit === 'Cr' ? newBalanceNum * 10000000 : newBalanceNum * 100000;
+
+    if (isNaN(newPurse) || newPurse <= 0 || isNaN(newBalance)) {
+      alert('Please enter a valid amount');
       return;
     }
-
-    // Calculate spent amount from players sold to this team
-    const spent = players
-      .filter(p => p.sold_to === team.id && p.status === 'Sold')
-      .reduce((sum, p) => sum + (p.final_price || 0), 0);
-
-    const newBalance = newPurse - spent;
 
     try {
       const res = await fetch(`${API_BASE}/franchisees/${team.id}`, {
@@ -187,19 +192,31 @@ function CreateFranchiseeCard({ bidders, franchisees, players, onCreated }) {
       if (res.ok) {
         setEditingTeamId(null);
         onCreated();
-        alert('Purse updated successfully!');
+        alert('Team updated successfully!');
       } else {
-        alert('Failed to update purse');
+        alert('Failed to update team');
       }
     } catch (e) {
       console.error(e);
-      alert('Error updating purse');
+      alert('Error updating team');
     }
   };
 
-  const startEditPurse = (team) => {
+  const startEditTeam = (team) => {
     setEditingTeamId(team.id);
-    setEditPurseLimit(team.purse_limit);
+    
+    const getParts = (val) => {
+      if (val >= 10000000) return { v: val / 10000000, u: 'Cr' };
+      return { v: val / 100000, u: 'Lakh' };
+    };
+
+    const p = getParts(team.purse_limit);
+    setEditPurseLimit(p.v);
+    setEditPurseUnit(p.u);
+
+    const b = getParts(team.balance);
+    setEditBalance(b.v);
+    setEditBalanceUnit(b.u);
   };
 
   return (
@@ -219,8 +236,15 @@ function CreateFranchiseeCard({ bidders, franchisees, players, onCreated }) {
           </select>
           <input type="text" placeholder="Team Name" required value={name} onChange={e => setName(e.target.value)}
             className="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none transition text-white" />
-          <input type="text" placeholder="Purse Limit (e.g. 100 Cr, 20.2 Cr, 50 L)" required value={purse} onChange={e => setPurse(e.target.value)}
-            className="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none transition text-white" />
+          <div className="flex space-x-2">
+            <input type="number" step="any" placeholder="Purse Limit (e.g. 100)" required value={purse} onChange={e => setPurse(e.target.value)}
+              className="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none transition text-white" />
+            <select value={purseUnit} onChange={e => setPurseUnit(e.target.value)}
+              className="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none transition text-white">
+              <option value="Cr" className="bg-gray-950">Cr</option>
+              <option value="Lakh" className="bg-gray-950">Lakh</option>
+            </select>
+          </div>
           <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 rounded-xl transition shadow-lg shadow-purple-500/20">
             Create
           </button>
@@ -253,28 +277,48 @@ function CreateFranchiseeCard({ bidders, franchisees, players, onCreated }) {
                   <div>
                     <span className="text-xs text-gray-500 block">Purse Limit</span>
                     {editingTeamId === f.id ? (
-                      <div className="flex items-center space-x-2 mt-1">
-                        <input 
-                          type="text" 
-                          value={editPurseLimit} 
-                          onChange={e => setEditPurseLimit(e.target.value)}
-                          className="bg-gray-950 border border-gray-700 rounded px-2 py-0.5 w-24 text-sm text-white" 
-                        />
-                        <button onClick={() => handleUpdatePurse(f)} className="text-xs text-green-400 font-semibold">Save</button>
-                        <button onClick={() => setEditingTeamId(null)} className="text-xs text-gray-400">Cancel</button>
+                      <div className="flex items-center space-x-1 mt-1">
+                        <input type="number" step="any" value={editPurseLimit} onChange={e => setEditPurseLimit(e.target.value)}
+                          className="bg-gray-950 border border-gray-700 rounded px-2 py-0.5 w-16 text-sm text-white" />
+                        <select value={editPurseUnit} onChange={e => setEditPurseUnit(e.target.value)}
+                          className="bg-gray-950 border border-gray-700 rounded px-1 py-0.5 text-sm text-white">
+                          <option value="Cr">Cr</option>
+                          <option value="Lakh">Lakh</option>
+                        </select>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-2 mt-0.5">
                         <span className="font-semibold text-gray-200">{formatIndianCurrency(f.purse_limit)}</span>
-                        <button onClick={() => startEditPurse(f)} className="text-gray-500 hover:text-purple-400 transition" title="Edit Purse">
-                          <Edit2 size={12} />
-                        </button>
                       </div>
                     )}
                   </div>
                   <div>
                     <span className="text-xs text-gray-500 block">Current Balance</span>
-                    <span className="font-semibold text-emerald-400 block mt-0.5">{formatIndianCurrency(f.balance)}</span>
+                    {editingTeamId === f.id ? (
+                      <div className="flex items-center space-x-1 mt-1">
+                        <input type="number" step="any" value={editBalance} onChange={e => setEditBalance(e.target.value)}
+                          className="bg-gray-950 border border-gray-700 rounded px-2 py-0.5 w-16 text-sm text-white" />
+                        <select value={editBalanceUnit} onChange={e => setEditBalanceUnit(e.target.value)}
+                          className="bg-gray-950 border border-gray-700 rounded px-1 py-0.5 text-sm text-white">
+                          <option value="Cr">Cr</option>
+                          <option value="Lakh">Lakh</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <span className="font-semibold text-emerald-400 block mt-0.5">{formatIndianCurrency(f.balance)}</span>
+                    )}
+                  </div>
+                  <div className="col-span-2 flex justify-end space-x-3 mt-2 border-t border-gray-800/60 pt-2">
+                    {editingTeamId === f.id ? (
+                      <>
+                        <button onClick={() => handleUpdateTeam(f)} className="text-sm px-3 py-1 bg-green-500/20 text-green-400 font-semibold rounded hover:bg-green-500/30 transition">Save Changes</button>
+                        <button onClick={() => setEditingTeamId(null)} className="text-sm px-3 py-1 bg-gray-700/50 text-gray-300 rounded hover:bg-gray-700 transition">Cancel</button>
+                      </>
+                    ) : (
+                      <button onClick={() => startEditTeam(f)} className="text-sm text-gray-400 hover:text-purple-400 flex items-center transition" title="Edit Team Limits">
+                        <Edit2 size={14} className="mr-1"/> Edit Limits
+                      </button>
+                    )}
                   </div>
                 </div>
 
