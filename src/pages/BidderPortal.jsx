@@ -62,7 +62,7 @@ export default function BidderPortal() {
 function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
   const [connection, setConnection] = useState(null);
   const [activePlayer, setActivePlayer] = useState(null);
-  const [highestBid, setHighestBid] = useState({ amount: 0, teamName: '' });
+  const [highestBid, setHighestBid] = useState({ amount: 0, teamName: '', teamId: null });
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
   
@@ -102,13 +102,13 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
 
     newConnection.on('ReceiveStartPlayer', (id, name, base) => {
       setActivePlayer({ id, name, base_price: base });
-      setHighestBid({ amount: base, teamName: 'Base Price' });
+      setHighestBid({ amount: base, teamName: 'Base Price', teamId: null });
       setIsPaused(false);
       fetchAuctionData(); // Refresh list to show active player status
     });
 
     newConnection.on('ReceiveBid', (franchiseeId, franchiseeName, amount) => {
-      setHighestBid({ amount, teamName: franchiseeName });
+      setHighestBid({ amount, teamName: franchiseeName, teamId: franchiseeId });
     });
 
     newConnection.on('ReceivePauseBid', () => setIsPaused(true));
@@ -274,10 +274,10 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <BidButton amount={2000000} label="+ 20L" onClick={() => placeBid(2000000)} disabled={isPaused} />
-            <BidButton amount={5000000} label="+ 50L" onClick={() => placeBid(5000000)} disabled={isPaused} />
-            <BidButton amount={10000000} label="+ 1Cr" onClick={() => placeBid(10000000)} disabled={isPaused} />
-            <BidButton amount={50000000} label="+ 5Cr" onClick={() => placeBid(50000000)} disabled={isPaused} />
+            <BidButton amount={2000000} label="+ 20L" onClick={() => placeBid(2000000)} disabled={isPaused || highestBid.teamId === team.id} />
+            <BidButton amount={5000000} label="+ 50L" onClick={() => placeBid(5000000)} disabled={isPaused || highestBid.teamId === team.id} />
+            <BidButton amount={10000000} label="+ 1Cr" onClick={() => placeBid(10000000)} disabled={isPaused || highestBid.teamId === team.id} />
+            <BidButton amount={50000000} label="+ 5Cr" onClick={() => placeBid(50000000)} disabled={isPaused || highestBid.teamId === team.id} />
           </div>
         </div>
       )}
@@ -317,7 +317,7 @@ function LiveAuctionDashboard({ user, team, onRefreshTeam }) {
 function BidButton({ label, onClick, disabled }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:hover:bg-gray-700 py-4 rounded-xl font-bold text-xl text-white transition shadow-lg border border-gray-600">
+      className="bg-gray-700 hover:bg-gray-600 active:scale-95 active:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:hover:bg-gray-700 disabled:active:scale-100 disabled:active:bg-gray-700 py-4 rounded-xl font-bold text-xl text-white transition-all shadow-lg border border-gray-600 duration-100">
       {label}
     </button>
   );
