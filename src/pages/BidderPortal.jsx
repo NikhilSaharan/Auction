@@ -52,6 +52,12 @@ export default function BidderPortal() {
     }
   };
 
+  useEffect(() => {
+    if (user && user.id) {
+      fetchTeam(user.id);
+    }
+  }, []);
+
   if (!user || !team) {
     return (
       <div className="max-w-md mx-auto mt-20 bg-gray-800 p-8 rounded-2xl border border-gray-700 shadow-xl animate-fade-in">
